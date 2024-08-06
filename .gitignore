@@ -132,3 +132,6 @@ dmypy.json
 # ParquetFiles
 *.parquet
 *.csv
+
+# checkpoints
+kai/checkpoints/
