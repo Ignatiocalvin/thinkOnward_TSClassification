@@ -57,13 +57,14 @@ def calculate_average_hourly_energy_consumption(folder_path, season_months_dict)
             df['hourly_avg_energy_consumption'] = 4 * df.groupby(['season', 'hour'])['out.electricity.total.energy_consumption'].transform('mean')
 
             # Pivot the dataframe to create the desired output format
-            result_df = df.pivot_table(values='hourly_avg_energy_consumption', index='bldg_id', columns=['season', 'hour'])
+            result_df = df.pivot_table(values='hourly_avg_energy_consumption', index='bldg_id', columns=['season', 'hour', 'in.state'])
 
             # Reset the column names
             result_df.columns = pd.MultiIndex.from_tuples([(season, hour+1) for season, months_list in season_months_dict.items() for hour in range(24)])
 
             # Add 'bldg_id' index with values corresponding to the names of the parquet files
             result_df['bldg_id'] = bldg_id
+            result_df['in.state'] = df['in.state'].iloc[0]
             result_df.set_index('bldg_id', inplace=True)
 
             # Append the result_df to the list
