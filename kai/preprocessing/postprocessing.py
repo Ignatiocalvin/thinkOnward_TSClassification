@@ -52,14 +52,14 @@ def inverse_process(prediction, encoder):
     mapped_df = pd.DataFrame(mapped_predictions, columns=cols)
     mapped_df = mapped_df.astype({col: 'int' for col in cols[0:4]})
     period_dict = {1940:'Before 1946',  # Using an estimated middle year
-                            1952:'1946 to 1959',
-                            1965:'1960 to 1969',
-                            1975:'1970 to 1979',
-                            1985:'1980 to 1989',
-                            1995:'1990 to 1999',
-                            2006:'2000 to 2012',
-                            2016:'2013 to 2018'
-                            }
+                    1952:'1946 to 1959',
+                    1965:'1960 to 1969',
+                    1975:'1970 to 1979',
+                    1985:'1980 to 1989',
+                    1995:'1990 to 1999',
+                    2006:'2000 to 2012',
+                    2016:'2013 to 2018'
+                    }
     mapped_df['in.vintage_com'] = mapped_df['in.vintage_com'].map(period_dict)
     
     return mapped_df

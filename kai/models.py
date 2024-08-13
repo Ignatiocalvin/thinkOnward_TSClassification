@@ -17,15 +17,79 @@ class TimeSeriesDataset(Dataset):
                 self.y_categorical[idx])
     
 # Define custom loss function
+# class CustomLoss(nn.Module):
+#     def __init__(self, column_groups):
+#         super(CustomLoss, self).__init__()
+#         self.mse_loss = nn.MSELoss()
+#         self.column_groups = column_groups  # Dictionary mapping attribute prefixes to column indices
+    
+#     def forward(self, categorical_pred, categorical_true):
+#         # Compute numerical loss (assuming the first few columns are numerical)
+#         loss_numerical = self.mse_loss(categorical_pred[:, :5], categorical_true[:, :5])
+
+#         # Initialize categorical loss
+#         loss_categorical = 0.0
+        
+#         # For each attribute group, compute the cross-entropy loss
+#         for attr, indices in self.column_groups.items():
+#             # Extract logits for the current attribute
+#             logits = categorical_pred[:, indices]
+            
+#             # Extract the true labels for the current attribute
+#             # Convert one-hot encoding to class indices
+#             true_labels = torch.argmax(categorical_true[:, indices], dim=1)
+            
+#             # Compute cross-entropy loss for the current attribute
+#             loss_categorical += F.cross_entropy(logits, true_labels)
+
+#         total_loss = loss_numerical + loss_categorical
+#         return total_loss, loss_numerical, loss_categorical
+# 
+# 
+
 class CustomLoss(nn.Module):
-    def __init__(self, column_groups):
+    def __init__(self, column_groups, valid_labels):
         super(CustomLoss, self).__init__()
         self.mse_loss = nn.MSELoss()
         self.column_groups = column_groups  # Dictionary mapping attribute prefixes to column indices
+        self.valid_labels = {k: torch.tensor(v).float() for k, v in valid_labels.items()}  # Convert valid labels to tensor
+        self.end_numerical = int(min([min(v) for v in self.column_groups.values()]))
+
+    def custom_closest_loss(self, predicted, true, valid_labels):
+        valid_labels = valid_labels.to(predicted.device)
+        # Expand dimensions to allow broadcasting (batch_size, num_valid_labels)
+        predicted_expanded = predicted.unsqueeze(1)  # (batch_size, 1)
+        valid_labels_expanded = valid_labels.unsqueeze(0)  # (1, num_valid_labels)
+        
+        # Calculate the absolute differences
+        distances = torch.abs(predicted_expanded - valid_labels_expanded)  # (batch_size, num_valid_labels)
+        
+        # Find the closest valid label (index of the smallest distance)
+        min_distances, min_indices = torch.min(distances, dim=1)  # min_distances: (batch_size,), min_indices: (batch_size,)
+        
+        # Get the corresponding closest labels
+        closest_labels = valid_labels[min_indices]  # (batch_size,)
+        
+        # Compute the loss only where the closest label is not equal to the true label
+        mask = closest_labels != true
+        loss = torch.abs(predicted[mask] - true[mask]).mean()  # Mean absolute error over all incorrect predictions
+        
+        return loss
     
     def forward(self, categorical_pred, categorical_true):
+
+        loss_numerical = 0.0
+        i = 0
+        # Loop over each attribute group
+        for attr, labels in self.valid_labels.items():# TODO: maybe speed it up by inserting all labels as a matrix and performing matrix operations
+            # Calculate the loss for this group using the valid labels
+            loss_numerical += self.custom_closest_loss(categorical_pred[:, i], categorical_true[:, i], labels)
+            i += 1
+
+
         # Compute numerical loss (assuming the first few columns are numerical)
-        loss_numerical = self.mse_loss(categorical_pred[:, :5], categorical_true[:, :5])
+        # loss_numerical = self.custom_closest_loss(categorical_pred[:, :self.end_numerical], categorical_true[:, :self.end_numerical])
+        # loss_numerical = self.mse_loss(categorical_pred[:, :self.end_numerical], categorical_true[:, :self.end_numerical])
 
         # Initialize categorical loss
         loss_categorical = 0.0
