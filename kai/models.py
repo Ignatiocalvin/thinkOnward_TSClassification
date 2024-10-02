@@ -107,7 +107,7 @@ class CustomLoss(nn.Module):
             loss_categorical += F.cross_entropy(logits, true_labels)
 
         total_loss = loss_numerical + loss_categorical
-        return total_loss, loss_numerical, loss_categorical    
+        return total_loss, loss_numerical, loss_categorical     
 
 # Define custom LSTM model
 class MultiTaskLSTM(nn.Module):
